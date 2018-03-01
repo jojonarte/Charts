@@ -1,5 +1,5 @@
 //
-//  BarChartRenderer.swift
+//  CustomBarChartRenderer.swift
 //  Charts
 //
 //  Copyright 2015 Daniel Cohen Gindi & Philipp Jahoda
@@ -7,6 +7,9 @@
 //  Licensed under Apache License 2.0
 //
 //  https://github.com/danielgindi/Charts
+//
+//  Created by Jojo Narte on 08/02/2018.
+//  Copyright © 2018 dnamicro. All rights reserved.
 //
 
 import Foundation
@@ -18,14 +21,14 @@ import CoreGraphics
 
 open class CustomBarChartRenderer: BarLineScatterCandleBubbleRenderer
 {
-    private class Buffer
+    fileprivate class Buffer
     {
         var rects = [CGRect]()
     }
     
     @objc open weak var dataProvider: BarChartDataProvider?
     
-    @objc public init(dataProvider: BarChartDataProvider, animator: Animator, viewPortHandler: ViewPortHandler)
+    @objc public init(dataProvider: BarChartDataProvider?, animator: Animator?, viewPortHandler: ViewPortHandler?)
     {
         super.init(animator: animator, viewPortHandler: viewPortHandler)
         
@@ -33,7 +36,7 @@ open class CustomBarChartRenderer: BarLineScatterCandleBubbleRenderer
     }
     
     // [CGRect] per dataset
-    private var _buffers = [Buffer]()
+    fileprivate var _buffers = [Buffer]()
     
     open override func initBuffers()
     {
@@ -68,11 +71,12 @@ open class CustomBarChartRenderer: BarLineScatterCandleBubbleRenderer
         }
     }
     
-    private func prepareBuffer(dataSet: IBarChartDataSet, index: Int)
+    fileprivate func prepareBuffer(dataSet: IBarChartDataSet, index: Int)
     {
         guard
             let dataProvider = dataProvider,
-            let barData = dataProvider.barData
+            let barData = dataProvider.barData,
+            let animator = animator
             else { return }
         
         let barWidthHalf = barData.barWidth / 2.0
@@ -203,11 +207,14 @@ open class CustomBarChartRenderer: BarLineScatterCandleBubbleRenderer
         }
     }
     
-    private var _barShadowRectBuffer: CGRect = CGRect()
+    fileprivate var _barShadowRectBuffer: CGRect = CGRect()
     
     @objc open func drawDataSet(context: CGContext, dataSet: IBarChartDataSet, index: Int)
     {
-        guard let dataProvider = dataProvider else { return }
+        guard
+            let dataProvider = dataProvider,
+            let viewPortHandler = self.viewPortHandler
+            else { return }
         
         let trans = dataProvider.getTransformer(forAxis: dataSet.axisDependency)
         
@@ -223,7 +230,10 @@ open class CustomBarChartRenderer: BarLineScatterCandleBubbleRenderer
         // draw the bar shadow before the values
         if dataProvider.isDrawBarShadowEnabled
         {
-            guard let barData = dataProvider.barData else { return }
+            guard
+                let animator = animator,
+                let barData = dataProvider.barData
+                else { return }
             
             let barWidth = barData.barWidth
             let barWidthHalf = barWidth / 2.0
@@ -340,7 +350,7 @@ open class CustomBarChartRenderer: BarLineScatterCandleBubbleRenderer
         rect.size.width = CGFloat(right - left)
         rect.size.height = CGFloat(bottom - top)
         
-        trans.rectValueToPixel(&rect, phaseY: animator.phaseY )
+        trans.rectValueToPixel(&rect, phaseY: animator?.phaseY ?? 1.0)
     }
 
     open override func drawValues(context: CGContext)
@@ -350,16 +360,18 @@ open class CustomBarChartRenderer: BarLineScatterCandleBubbleRenderer
         {
             guard
                 let dataProvider = dataProvider,
-                let barData = dataProvider.barData
+                let viewPortHandler = self.viewPortHandler,
+                let barData = dataProvider.barData,
+                let animator = animator
                 else { return }
-
+            
             var dataSets = barData.dataSets
 
             let valueOffsetPlus: CGFloat = 4.5
             var posOffset: CGFloat
             var negOffset: CGFloat
             let drawValueAboveBar = dataProvider.isDrawValueAboveBarEnabled
-
+            
             for dataSetIndex in 0 ..< barData.dataSetCount
             {
                 guard let dataSet = dataSets[dataSetIndex] as? IBarChartDataSet else { continue }
@@ -403,6 +415,7 @@ open class CustomBarChartRenderer: BarLineScatterCandleBubbleRenderer
                         let rect = buffer.rects[j]
                         
                         let x = rect.origin.x + rect.size.width / 2.0
+                        let y = rect.origin.y + rect.size.height / 2.0
                         
                         if !viewPortHandler.isInBoundsRight(x)
                         {
@@ -427,8 +440,8 @@ open class CustomBarChartRenderer: BarLineScatterCandleBubbleRenderer
                                     dataSetIndex: dataSetIndex,
                                     viewPortHandler: viewPortHandler),
                                 xPos: x,
-                                yPos: val >= 0.0
-                                    ? (rect.origin.y + posOffset)
+                                yPos: val > 0.0
+                                    ? y
                                     : (rect.origin.y + rect.size.height + negOffset),
                                 font: valueFont,
                                 align: .center,
@@ -684,7 +697,7 @@ open class CustomBarChartRenderer: BarLineScatterCandleBubbleRenderer
     }
     
     /// Sets the drawing position of the highlight object based on the riven bar-rect.
-    internal func setHighlightDrawPos(highlight high: Highlight, barRect: CGRect)
+    @objc internal func setHighlightDrawPos(highlight high: Highlight, barRect: CGRect)
     {
         high.setDraw(x: barRect.midX, y: barRect.origin.y)
     }
