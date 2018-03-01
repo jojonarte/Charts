@@ -526,7 +526,7 @@ open class HorizontalBarChartRenderer: BarChartRenderer
                             }
                             
                             trans.pointValuesToPixel(&transformed)
-                            
+                            var xOffset: CGFloat = 0
                             for k in 0 ..< transformed.count
                             {
                                 let val = vals[k]
@@ -549,7 +549,9 @@ open class HorizontalBarChartRenderer: BarChartRenderer
                                 
                                 let drawBelow = (val == 0.0 && negY == 0.0 && posY > 0.0) || val < 0.0
 
-                                let x = transformed[k].x + (drawBelow ? negOffset : posOffset)
+                                let x = transformed[k].x / 2.0 + xOffset
+                                xOffset += x
+                                //let x = transformed[k].x + (drawBelow ? negOffset : posOffset)
                                 let y = rect.origin.y + rect.size.height / 2.0
                                 
                                 if (!viewPortHandler.isInBoundsTop(y))
