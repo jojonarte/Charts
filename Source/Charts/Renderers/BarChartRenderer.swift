@@ -403,6 +403,7 @@ open class BarChartRenderer: BarLineScatterCandleBubbleRenderer
                         let rect = buffer.rects[j]
                         
                         let x = rect.origin.x + rect.size.width / 2.0
+                        let y = rect.origin.y + rect.size.height / 2.0
                         
                         if !viewPortHandler.isInBoundsRight(x)
                         {
